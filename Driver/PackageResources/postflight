@@ -1,0 +1,52 @@
+#!/bin/sh
+
+TARGET=$2
+KEXT=${TARGET}/System/Library/Extensions/3ware.kext
+
+# First some sanity
+if [ ! -d ${KEXT} ]; then
+	echo "Escalade.kext not installed"
+	exit 1
+fi
+if [ `id -u` != 0 ]; then
+	echo "Not running as root"
+	exit 1
+fi
+
+# Fixup permissions
+mtree -Uex -p / <<EOF
+/set uid=0 gid=0
+.						type=dir  nochange
+    System					type=dir  nochange
+        Library					type=dir  nochange
+            Extensions				type=dir  nochange
+                3ware.kext			type=dir  mode=0555
+                    Contents			type=dir  mode=0555
+                        Info.plist		type=file mode=0444 
+                        MacOS			type=dir  mode=0555
+                            3ware		type=file mode=0444
+                        ..
+                        Resources		type=dir  mode=0555
+                            Escalade.icns	type=file mode=0444
+                            English.lproj	type=dir  mode=0555
+                                InfoPlist.strings type=file mode=0444
+                            ..
+                        ..
+                    ..
+                ..
+            ..
+        ..
+    ..
+    usr						type=dir  nochange
+        sbin					type=dir  nochange
+            tw_cli				type=file mode=0544
+        ..
+    ..
+..
+EOF
+
+# Force a rescan of the kexts on next boot
+touch /System/Library/Extensions
+
+exit 0
+
